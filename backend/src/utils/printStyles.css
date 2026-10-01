@@ -1,0 +1,61 @@
+/* 
+  Print-specific CSS to ensure documents look professional on A4 paper 
+  Import this in your top-level React component or index.css
+*/
+
+@media print {
+  /* Hide UI elements that shouldn't be printed */
+  .no-print, 
+  nav, 
+  sidebar, 
+  header, 
+  footer, 
+  button {
+    display: none !important;
+  }
+
+  /* Reset body and remove margins for clean printing */
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: white;
+    font-size: 12pt;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  /* Ensure the printable area uses the full page width */
+  .printable-document {
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  /* Break pages correctly */
+  .page-break-before {
+    page-break-before: always;
+  }
+  
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+
+  /* Tables formatting for print */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+
+  table th, table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  table th {
+    background-color: #f2f2f2 !important; /* Force background color if supported */
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+}

@@ -1,0 +1,44 @@
+# Environments
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Flutter / Dart
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/.widget_preview/
+
+# Android Studio / IntelliJ / Eclipse / VS Code
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+*.class
+
+# Node / JS
+**/node_modules/
+
+# Logs and databases
+*.log
+*.sqlite
+*.sqlite3
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
