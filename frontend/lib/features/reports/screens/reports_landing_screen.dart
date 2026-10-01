@@ -11,25 +11,20 @@ class ReportsLandingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Reports & Documents', style: AppTypography.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              'Review business activity, financial records and inventory.',
+              style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
+      ),
       body: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              color: AppColors.surface,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Reports & Documents', style: AppTypography.textTheme.headlineLarge),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Review business activity, financial records and inventory performance.',
-                    style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-          ),
           SliverPadding(
             padding: const EdgeInsets.all(24),
             sliver: SliverList(
@@ -63,7 +58,7 @@ class ReportsLandingScreen extends StatelessWidget {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Text(title, style: AppTypography.textTheme.titleLarge),
+      child: Text(title, style: AppTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary)),
     );
   }
 
@@ -97,23 +92,30 @@ class _ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => context.go(route),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primaryLight.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppColors.primary),
+              child: Icon(icon, color: AppColors.primary, size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -121,7 +123,7 @@ class _ReportCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(title, style: AppTypography.textTheme.titleMedium),
+                  Text(title, style: AppTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(description, style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
                 ],

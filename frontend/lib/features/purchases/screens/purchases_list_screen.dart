@@ -33,113 +33,177 @@ class _PurchasesListContent extends StatelessWidget {
     final controller = context.watch<PurchasesController>();
     final isDesktop = ResponsiveLayout.isDesktop(context);
 
-    if (controller.isLoading && controller.displayedPurchases.isEmpty) {
-      return const LoadingState(message: 'Loading purchases...');
-    }
-
-    if (controller.errorMessage != null && controller.displayedPurchases.isEmpty) {
-      return ErrorState(
-        message: controller.errorMessage!,
-        onRetry: controller.loadData,
-      );
+    double totalDue = 0;
+    int count = controller.displayedPurchases.length;
+    for (var p in controller.displayedPurchases) {
+      totalDue += p.dueAmount;
     }
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Purchases', style: AppTypography.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              '$count records · Rs. ${NumberFormat.compact().format(totalDue)} total due',
+              style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: controller.loadData,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.go('/purchases/new'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('New Purchase'),
+      ),
       body: Column(
         children: [
+          // Search & Filters Header
           Container(
-            padding: const EdgeInsets.all(24),
-            color: AppColors.surface,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            color: AppColors.background,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Purchases', style: AppTypography.textTheme.headlineLarge),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Track tyre purchases, supplier payments and outstanding balances.',
-                          style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ],
+                // Search Bar
+                TextField(
+                  onChanged: controller.updateSearch,
+                  decoration: InputDecoration(
+                    hintText: 'Search purchases or suppliers...',
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.border),
                     ),
-                    PrimaryButton(
-                      text: '+ New Purchase',
-                      onPressed: () => context.go('/purchases/new'),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.border),
                     ),
-                  ],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 24),
-                _buildFiltersRow(context, controller, isDesktop),
+                const SizedBox(height: 16),
+                
+                // Filter Pills
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterPill('All', isSelected: controller.selectedStatus == null || controller.selectedStatus == 'All', onTap: () => controller.setStatusFilter('All')),
+                      _buildFilterPill('Paid', isSelected: controller.selectedStatus == 'Paid', onTap: () => controller.setStatusFilter('Paid')),
+                      _buildFilterPill('Partial', isSelected: controller.selectedStatus == 'Partial', onTap: () => controller.setStatusFilter('Partial')),
+                      _buildFilterPill('Credit', isSelected: controller.selectedStatus == 'Credit', onTap: () => controller.setStatusFilter('Credit')),
+                      _buildFilterPill('Returned', isSelected: controller.selectedStatus == 'RETURNED', onTap: () => controller.setStatusFilter('RETURNED')),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
           
+          // List / Table or Empty State
           Expanded(
-            child: controller.displayedPurchases.isEmpty
-                ? const EmptyState(
-                    title: 'No Purchases Yet',
-                    message: 'Purchases from suppliers will appear here once they are recorded.',
-                    icon: Icons.local_shipping,
-                  )
-                : RefreshIndicator(
-                    onRefresh: controller.loadData,
-                    child: isDesktop 
-                        ? _buildDesktopTable(context, controller.displayedPurchases)
-                        : _buildMobileList(context, controller.displayedPurchases),
-                  ),
+            child: controller.isLoading && controller.displayedPurchases.isEmpty
+                ? const LoadingState(message: 'Loading purchases...')
+                : controller.errorMessage != null && controller.displayedPurchases.isEmpty
+                    ? ErrorState(message: controller.errorMessage!, onRetry: controller.loadData)
+                    : controller.displayedPurchases.isEmpty
+                        ? _buildEmptyState(context)
+                        : RefreshIndicator(
+                            onRefresh: controller.loadData,
+                            child: isDesktop 
+                                ? _buildDesktopTable(context, controller.displayedPurchases)
+                                : _buildMobileList(context, controller.displayedPurchases),
+                          ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFiltersRow(BuildContext context, PurchasesController controller, bool isDesktop) {
-    final searchField = SizedBox(
-      width: isDesktop ? 300 : double.infinity,
-      child: AppSearchField(
-        hint: 'Search purchases...',
-        onChanged: controller.updateSearch,
-      ),
-    );
-
-    final statusDropdown = SizedBox(
-      width: isDesktop ? 150 : double.infinity,
-      child: DropdownButtonFormField<String>(
-        decoration: const InputDecoration(
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          border: OutlineInputBorder(),
+  Widget _buildFilterPill(String label, {required bool isSelected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 12, bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
+          boxShadow: isSelected ? [
+            BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+          ] : [],
         ),
-        value: controller.selectedStatus ?? 'All',
-        items: ['All', 'Paid', 'Partial', 'Credit', 'RETURNED', 'REVERSED']
-            .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-            .toList(),
-        onChanged: (val) => controller.setStatusFilter(val),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
       ),
     );
+  }
 
-    if (!isDesktop) {
-      return Column(
-        children: [
-          searchField,
-          const SizedBox(height: 12),
-          statusDropdown,
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        searchField,
-        const SizedBox(width: 16),
-        statusDropdown,
-      ],
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.local_shipping, size: 64, color: AppColors.primary),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No Purchases Yet',
+              style: AppTypography.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Purchases from suppliers will appear here.',
+              style: AppTypography.textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => context.go('/purchases/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('New Purchase'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -149,12 +213,19 @@ class _PurchasesListContent extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         width: double.infinity,
         child: DataTable(
-          headingTextStyle: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
+          headingTextStyle: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.bold),
           columns: const [
             DataColumn(label: Text('Purchase')),
             DataColumn(label: Text('Date')),
@@ -171,7 +242,7 @@ class _PurchasesListContent extends StatelessWidget {
                 DataCell(
                   InkWell(
                     onTap: () => context.go('/purchases/${p.id}'),
-                    child: Text(p.purchaseNumber, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
+                    child: Text(p.purchaseNumber, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 DataCell(Text(dateStr)),
@@ -203,8 +274,15 @@ class _PurchasesListContent extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +290,7 @@ class _PurchasesListContent extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(p.purchaseNumber, style: AppTypography.textTheme.titleMedium?.copyWith(color: AppColors.primary)),
+                    Text(p.purchaseNumber, style: AppTypography.textTheme.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
                     TransactionStatus(status: p.paymentStatus),
                   ],
                 ),
@@ -228,7 +306,7 @@ class _PurchasesListContent extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        MoneyDisplay(amount: p.totalAmount, style: AppTypography.textTheme.titleMedium),
+                        MoneyDisplay(amount: p.totalAmount, style: AppTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                         if (p.dueAmount > 0)
                           Text('Due: Rs. ${NumberFormat('#,##0').format(p.dueAmount)}', style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.warning)),
                       ],
