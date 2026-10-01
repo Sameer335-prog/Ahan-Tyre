@@ -32,174 +32,221 @@ class _InventoryListContent extends StatelessWidget {
     final controller = context.watch<ProductController>();
     final isDesktop = ResponsiveLayout.isDesktop(context);
 
-    if (controller.isLoading && controller.displayedProducts.isEmpty) {
-      return const LoadingState(message: 'Loading inventory...');
-    }
-
-    if (controller.errorMessage != null && controller.displayedProducts.isEmpty) {
-      return ErrorState(
-        message: controller.errorMessage!,
-        onRetry: controller.loadData,
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          // Header & Summary
-          Container(
-            padding: const EdgeInsets.all(24),
-            color: AppColors.surface,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Products / Inventory', style: AppTypography.textTheme.headlineLarge),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Manage tyre products and stock',
-                          style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                    PrimaryButton(
-                      text: '+ Add Product',
-                      onPressed: () => context.go('/inventory/new'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildSummaryCounters(controller.displayedProducts),
-                const SizedBox(height: 24),
-                _buildFiltersRow(context, controller, isDesktop),
-              ],
-            ),
-          ),
-          
-          // List / Table
-          Expanded(
-            child: controller.displayedProducts.isEmpty
-                ? const EmptyState(
-                    title: 'No products found',
-                    message: 'Try changing your search or filters.',
-                    icon: Icons.inventory_2_outlined,
-                  )
-                : RefreshIndicator(
-                    onRefresh: controller.loadData,
-                    child: isDesktop 
-                        ? _buildDesktopTable(context, controller.displayedProducts)
-                        : _buildMobileList(context, controller.displayedProducts),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryCounters(List<Product> products) {
     int totalUnits = 0;
     int lowStock = 0;
     int outOfStock = 0;
 
-    for (var p in products) {
+    for (var p in controller.displayedProducts) {
       totalUnits += p.currentStock.toInt();
       if (p.stockStatus == 'Out of Stock') outOfStock++;
       else if (p.stockStatus == 'Low Stock') lowStock++;
     }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildCounter('Total Products', products.length.toString()),
-        _buildCounter('Total Units', totalUnits.toString()),
-        _buildCounter('Low Stock', lowStock.toString(), isAlert: true),
-        _buildCounter('Out of Stock', outOfStock.toString(), isError: true),
-      ],
-    );
-  }
-
-  Widget _buildCounter(String label, String value, {bool isAlert = false, bool isError = false}) {
-    Color valColor = AppColors.textPrimary;
-    if (isAlert) valColor = AppColors.warning;
-    if (isError) valColor = AppColors.error;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
-        const SizedBox(height: 4),
-        Text(value, style: AppTypography.textTheme.titleMedium?.copyWith(color: valColor)),
-      ],
-    );
-  }
-
-  Widget _buildFiltersRow(BuildContext context, ProductController controller, bool isDesktop) {
-    final searchField = SizedBox(
-      width: isDesktop ? 300 : double.infinity,
-      child: AppSearchField(
-        hint: 'Search tyres...',
-        onChanged: controller.updateSearch,
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tyre Inventory', style: AppTypography.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              '$totalUnits total units in stock',
+              style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: controller.loadData,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
-    );
-
-    if (!isDesktop) {
-      return Column(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.go('/inventory/new'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Tyre'),
+      ),
+      body: Column(
         children: [
-          searchField,
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _buildBrandDropdown(controller)),
-              const SizedBox(width: 8),
-              Expanded(child: _buildStockDropdown(controller)),
-            ],
+          // Search & Filters Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            color: AppColors.background,
+            child: Column(
+              children: [
+                // Search Bar
+                TextField(
+                  onChanged: controller.updateSearch,
+                  decoration: InputDecoration(
+                    hintText: 'Search by tyre name, brand, or size...',
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Filter Pills
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterPill(
+                        'All',
+                        count: controller.displayedProducts.length,
+                        isSelected: controller.selectedStockStatus == null || controller.selectedStockStatus == 'All',
+                        onTap: () => controller.setFilter(stockStatus: 'All'),
+                      ),
+                      _buildFilterPill(
+                        'In Stock',
+                        isSelected: controller.selectedStockStatus == 'In Stock',
+                        onTap: () => controller.setFilter(stockStatus: 'In Stock'),
+                      ),
+                      _buildFilterPill(
+                        'Low Stock',
+                        count: lowStock,
+                        isSelected: controller.selectedStockStatus == 'Low Stock',
+                        onTap: () => controller.setFilter(stockStatus: 'Low Stock'),
+                      ),
+                      _buildFilterPill(
+                        'Out of Stock',
+                        count: outOfStock,
+                        isSelected: controller.selectedStockStatus == 'Out of Stock',
+                        onTap: () => controller.setFilter(stockStatus: 'Out of Stock'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+          
+          // List / Table or Empty State
+          Expanded(
+            child: controller.isLoading && controller.displayedProducts.isEmpty
+                ? const LoadingState(message: 'Loading inventory...')
+                : controller.errorMessage != null && controller.displayedProducts.isEmpty
+                    ? ErrorState(message: controller.errorMessage!, onRetry: controller.loadData)
+                    : controller.displayedProducts.isEmpty
+                        ? _buildEmptyState(context)
+                        : RefreshIndicator(
+                            onRefresh: controller.loadData,
+                            child: isDesktop 
+                                ? _buildDesktopTable(context, controller.displayedProducts)
+                                : _buildMobileList(context, controller.displayedProducts),
+                          ),
           ),
         ],
-      );
-    }
-
-    return Row(
-      children: [
-        searchField,
-        const SizedBox(width: 16),
-        SizedBox(width: 150, child: _buildBrandDropdown(controller)),
-        const SizedBox(width: 16),
-        SizedBox(width: 150, child: _buildStockDropdown(controller)),
-      ],
+      ),
     );
   }
 
-  Widget _buildBrandDropdown(ProductController controller) {
-    final brands = ['All', ...controller.availableBrands];
-    return DropdownButtonFormField<String>(
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(),
+  Widget _buildFilterPill(String label, {int? count, required bool isSelected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 12, bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
+          boxShadow: isSelected ? [
+            BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+          ] : [],
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+            if (count != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white.withOpacity(0.2) : AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
-      value: controller.selectedBrand ?? 'All',
-      items: brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-      onChanged: (val) => controller.setFilter(brand: val),
     );
   }
 
-  Widget _buildStockDropdown(ProductController controller) {
-    final statuses = ['All', 'In Stock', 'Low Stock', 'Out of Stock'];
-    return DropdownButtonFormField<String>(
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(),
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.primary),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No tyres match your filter',
+              style: AppTypography.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add a new tyre or adjust your search term.',
+              style: AppTypography.textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => context.go('/inventory/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Tyre'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ],
+        ),
       ),
-      value: controller.selectedStockStatus ?? 'All',
-      items: statuses.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-      onChanged: (val) => controller.setFilter(stockStatus: val),
     );
   }
 
@@ -209,12 +256,19 @@ class _InventoryListContent extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         width: double.infinity,
         child: DataTable(
-          headingTextStyle: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
+          headingTextStyle: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.bold),
           columns: const [
             DataColumn(label: Text('Product')),
             DataColumn(label: Text('Size')),
@@ -229,22 +283,14 @@ class _InventoryListContent extends StatelessWidget {
                 DataCell(
                   InkWell(
                     onTap: () => context.go('/inventory/${p.id}'),
-                    child: Text('${p.brand} ${p.model}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
+                    child: Text('${p.brand} ${p.model}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 DataCell(Text(p.sizeDisplay)),
                 DataCell(Text(p.brand)),
-                DataCell(Text(p.currentStock.toInt().toString())),
+                DataCell(Text(p.currentStock.toInt().toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
                 DataCell(MoneyDisplay(amount: p.sellingPrice)),
-                DataCell(
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (!p.isActive) const Padding(padding: EdgeInsets.only(right: 8), child: TransactionStatus(status: 'Reversed')), // Using Reversed style for inactive
-                      StockStatus(quantity: p.currentStock.toInt()),
-                    ],
-                  ),
-                ),
+                DataCell(StockStatus(quantity: p.currentStock.toInt())),
               ],
             );
           }).toList(),
@@ -266,8 +312,15 @@ class _InventoryListContent extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +328,7 @@ class _InventoryListContent extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('${p.brand} ${p.model}', style: AppTypography.textTheme.titleMedium),
+                    Expanded(child: Text('${p.brand} ${p.model}', style: AppTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
                     if (!p.isActive) const TransactionStatus(status: 'Reversed'),
                   ],
                 ),
@@ -291,9 +344,9 @@ class _InventoryListContent extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Stock: ${p.currentStock.toInt()}', style: AppTypography.textTheme.bodyMedium),
+                        Text('Stock: ${p.currentStock.toInt()}', style: AppTypography.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                         const SizedBox(height: 4),
-                        MoneyDisplay(amount: p.sellingPrice),
+                        MoneyDisplay(amount: p.sellingPrice, style: AppTypography.textTheme.titleMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     StockStatus(quantity: p.currentStock.toInt()),
