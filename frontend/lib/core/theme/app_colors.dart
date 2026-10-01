@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Brand Colors
-  static const Color primary = Color(0xFF1E3A8A); // Deep blue for professional automotive look
+  // Brand Colors (Blue Theme)
+  static const Color primary = Color(0xFF1E3A8A); // Deep Blue
+  static const Color primaryLight = Color(0xFF3B82F6); // Lighter Blue for gradients
   static const Color primaryContainer = Color(0xFFDBEAFE);
   static const Color secondary = Color(0xFF475569); // Slate gray
   static const Color secondaryContainer = Color(0xFFF1F5F9);
@@ -31,6 +32,13 @@ class AppColors {
   
   static const Color info = Color(0xFF3B82F6);
   static const Color infoBackground = Color(0xFFDBEAFE);
+
+  // Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   // Dark Theme (Foundation)
   static const Color darkBackground = Color(0xFF0F172A);
